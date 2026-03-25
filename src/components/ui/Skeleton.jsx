@@ -1,5 +1,20 @@
-export default function Skeleton() {
+export default function Skeleton({ height = 120, className = "" }) {
   return (
-    <div className="animate-pulse bg-gray-300 dark:bg-gray-700 h-32 rounded-xl" />
+    <div
+      className={`skeleton ${className}`}
+      style={{ height }}
+    />
+  );
+}
+
+export function StatSkeleton() {
+  return (
+    <div className="stat-card skeleton" style={{ height: 90 }} />
+  );
+}
+
+export function ChartSkeleton() {
+  return (
+    <div className="chart-card skeleton" style={{ height: 340 }} />
   );
 }

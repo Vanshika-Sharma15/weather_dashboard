@@ -10,19 +10,24 @@ export async function getWeather(lat, lon) {
       params: {
         latitude: lat,
         longitude: lon,
-        current_weather: true,
+        current: "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code",
         daily:
-          "temperature_2m_max,temperature_2m_min,sunrise,sunset",
+          "temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max,wind_speed_10m_max,uv_index_max",
         hourly:
-          "temperature_2m,relativehumidity_2m,precipitation,visibility,windspeed_10m,uv_index,precipitation_probability",
+          "temperature_2m,relative_humidity_2m,precipitation,visibility,wind_speed_10m,uv_index,precipitation_probability",
+        timezone: "auto",
+        forecast_days: 7,
       },
     }),
     axios.get(`${AIR}/air-quality`, {
       params: {
         latitude: lat,
         longitude: lon,
+        current: "us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide",
         hourly:
           "pm10,pm2_5,carbon_monoxide,carbon_dioxide,nitrogen_dioxide,sulphur_dioxide,us_aqi",
+        timezone: "auto",
+        forecast_days: 7,
       },
     }),
   ]);
@@ -42,7 +47,8 @@ export async function getHistorical(lat, lon, start, end) {
         start_date: start,
         end_date: end,
         daily:
-          "temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,windspeed_10m_max,winddirection_10m_dominant,sunrise,sunset",
+          "temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset",
+        timezone: "auto",
       },
     }),
     axios.get(`${AIR}/air-quality`, {
@@ -52,6 +58,7 @@ export async function getHistorical(lat, lon, start, end) {
         start_date: start,
         end_date: end,
         hourly: "pm10,pm2_5",
+        timezone: "auto",
       },
     }),
   ]);

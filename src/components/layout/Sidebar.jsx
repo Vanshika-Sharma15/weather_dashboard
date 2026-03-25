@@ -1,31 +1,56 @@
 import { useState } from "react";
+import { NavLink } from "react-router-dom";
+
+const navItems = [
+  { to: "/", label: "Current Weather", icon: "🌤️" },
+  { to: "/historical", label: "Historical Data", icon: "📈" },
+];
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <button
-        className="md:hidden fixed top-4 left-4 z-50"
-        onClick={() => setOpen(true)}
-      >
-        ☰
+      {/* Mobile hamburger */}
+      <button className="hamburger" onClick={() => setOpen(!open)}>
+        <span className={`ham-icon ${open ? "open" : ""}`}>
+          <span /><span /><span />
+        </span>
       </button>
 
+      {/* Overlay */}
       {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setOpen(false)}
-        />
+        <div className="sidebar-overlay" onClick={() => setOpen(false)} />
       )}
 
-      <div
-        className={`fixed z-50 h-full w-64 bg-gray-800 p-4 transform ${
-          open ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 transition`}
-      >
-        <h1 className="text-xl mb-6">Weather</h1>
-      </div>
+      {/* Sidebar */}
+      <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
+        <div className="sidebar-logo">
+          <span className="logo-icon">⛈</span>
+          <span className="logo-text">ATMOS</span>
+        </div>
+
+        <nav className="sidebar-nav">
+          {navItems.map(({ to, label, icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "nav-item-active" : ""}`
+              }
+              onClick={() => setOpen(false)}
+            >
+              <span className="nav-icon">{icon}</span>
+              <span className="nav-label">{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <span>Open-Meteo API</span>
+        </div>
+      </aside>
     </>
   );
 }
