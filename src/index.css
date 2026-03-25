@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-900 text-white;
+}
+
+.apexcharts-tooltip {
+  background: #1f2937 !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Toolbar menu (3 lines dropdown) */
+.apexcharts-menu {
+  background: #1f2937 !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+}
+
+/* Menu items */
+.apexcharts-menu-item {
+  color: white !important;
+  padding: 8px 12px !important;
+}
+
+/* Hover effect */
+.apexcharts-menu-item:hover {
+  background: #374151 !important;
+  cursor: pointer;
+}
+
+/* Toolbar icons */
+.apexcharts-toolbar svg {
+  fill: #9ca3af !important;
+}
+
+.apexcharts-toolbar svg:hover {
+  fill: white !important;
+}
+
+.react-datepicker {
+  background-color: #1f2937 !important;
+  border: none !important;
+  color: white !important;
+}
+
+.react-datepicker__header {
+  background-color: #111827 !important;
+  border-bottom: none !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker-time__header,
+.react-datepicker-year-header {
+  color: white !important;
+}
+
+.react-datepicker__day,
+.react-datepicker__day-name {
+  color: #d1d5db !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: #374151 !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: #2563eb !important;
+  color: white !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: white !important;
+}
+
+.react-datepicker__input-container input {
+  background-color: #1f2937 !important;  /* dark bg */
+  color: white !important;               /* visible text */
+  border: 1px solid #374151 !important;
+  padding: 6px 10px;
+  border-radius: 6px;
+  outline: none;
+}
+
+.react-datepicker__input-container input::placeholder {
+  color: #9ca3af !important;
+}
