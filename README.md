@@ -1,6 +1,6 @@
 # ATMOS — Weather Dashboard
 
-A responsive weather dashboard built with React + Vite, powered by the free [Open-Meteo API](https://open-meteo.com). No API key required.                         Vercel Link: https://weather-dashboard-nine-puce.vercel.app/
+-A responsive weather dashboard built with React + Vite, powered by the free [Open-Meteo API](https://open-meteo.com). No API key required.                         -Vercel Link: https://weather-dashboard-nine-puce.vercel.app/
 
 ---
 
