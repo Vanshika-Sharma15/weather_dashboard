@@ -6,11 +6,14 @@ export const formatDate = (date) =>
 
 export const formatTime = (iso) => {
   if (!iso) return "";
-  return new Date(iso).toLocaleTimeString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const timePart = iso.split("T")[1];
+  if (!timePart) return "";
+  const [hStr, mStr] = timePart.split(":");
+  const hours = parseInt(hStr, 10);
+  const minutes = mStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const h12 = hours % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
 };
 
 export const formatHour = (iso) => {

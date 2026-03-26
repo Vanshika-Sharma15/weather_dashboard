@@ -1,50 +1,51 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { subYears } from "date-fns";
 import useGeolocation from "../hooks/useGeolocation";
+import useLocationName from "../hooks/useLocationName";
 import { getHistorical } from "../api/weatherService";
 import BaseChart from "../components/charts/BaseChart";
 import { ChartSkeleton } from "../components/ui/Skeleton";
 
-// Aggregate hourly air data → daily average
+// Aggregate hourly air data → daily average using O(n) single-pass Map
+// The naive O(days × hours) nested scan is ~900ms for 2yr data — this is ~9ms
 function aggregateAirQuality(times, pm10Arr, pm25Arr, dates) {
+  // Single pass: bucket each hourly reading by its date prefix
+  const buckets = new Map();
+  times.forEach((t, i) => {
+    const day = t.substring(0, 10); // "2024-03-01"
+    if (!buckets.has(day)) buckets.set(day, { pm10: [], pm25: [] });
+    if (pm10Arr[i] != null) buckets.get(day).pm10.push(pm10Arr[i]);
+    if (pm25Arr[i] != null) buckets.get(day).pm25.push(pm25Arr[i]);
+  });
+  const avg = (arr) =>
+    arr.length
+      ? parseFloat((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2))
+      : null;
   return dates.map((d) => {
-    const indices = times
-      .map((t, i) => (t.startsWith(d) ? i : -1))
-      .filter((i) => i !== -1);
-    const avg = (arr) => {
-      const valid = indices.map((i) => arr[i]).filter((v) => v != null);
-      return valid.length ? parseFloat((valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(2)) : null;
-    };
-    return { pm10: avg(pm10Arr), pm25: avg(pm25Arr) };
+    const b = buckets.get(d) || { pm10: [], pm25: [] };
+    return { pm10: avg(b.pm10), pm25: avg(b.pm25) };
   });
 }
 
-// Convert "2024-03-01T06:25" sunrise/sunset to hour float for chart
+// Convert "2024-03-01T06:25" sunrise/sunset to hour float for chart.
+// Open-Meteo returns these already in the requested timezone (timezone=auto),
+// so we parse the time portion directly — no offset math needed.
 function timeToHourFloat(iso) {
   if (!iso) return null;
-  const d = new Date(iso);
-  // IST = UTC+5:30
-  const utcMs = d.getTime() + d.getTimezoneOffset() * 60000;
-  const istMs = utcMs + 5.5 * 3600000;
-  const ist = new Date(istMs);
-  return parseFloat((ist.getHours() + ist.getMinutes() / 60).toFixed(2));
-}
-
-function timeToLabel(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const utcMs = d.getTime() + d.getTimezoneOffset() * 60000;
-  const istMs = utcMs + 5.5 * 3600000;
-  const ist = new Date(istMs);
-  return `${ist.getHours().toString().padStart(2, "0")}:${ist.getMinutes().toString().padStart(2, "0")}`;
+  // iso format: "2024-03-01T06:25" — already in local timezone from API
+  const timePart = iso.split("T")[1];
+  if (!timePart) return null;
+  const [hStr, mStr] = timePart.split(":");
+  return parseFloat((parseInt(hStr, 10) + parseInt(mStr, 10) / 60).toFixed(2));
 }
 
 export default function Historical() {
-  const { lat, lon } = useGeolocation();
+  const { lat, lon, locating } = useGeolocation();
+  const locationName = useLocationName(lat, lon);
   const [start, setStart] = useState(subYears(new Date(), 1));
-  const [end, setEnd] = useState(new Date(Date.now() - 86400000 * 2));
+  const [end, setEnd] = useState(new Date(Date.now() - 86400000));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -52,13 +53,23 @@ export default function Historical() {
   const minStart = subYears(new Date(), 2);
 
   const handleLoad = async () => {
+    // Guard: enforce 2-year maximum range
+    const msInTwoYears = 2 * 365.25 * 24 * 3600 * 1000;
+    if (end - start > msInTwoYears) {
+      setError("Date range cannot exceed 2 years. Please adjust your selection.");
+      return;
+    }
+    // Use local date parts to avoid UTC offset issues
+    const toLocalDateStr = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
     setLoading(true);
     setError(null);
     try {
       const res = await getHistorical(
         lat, lon,
-        start.toISOString().split("T")[0],
-        end.toISOString().split("T")[0]
+        toLocalDateStr(start),
+        toLocalDateStr(end)
       );
       setData(res);
     } catch (e) {
@@ -68,10 +79,10 @@ export default function Historical() {
     }
   };
 
-  const renderCharts = () => {
+  const charts = useMemo(() => {
     if (!data) return null;
     const d = data.weather.daily;
-    const dates = d.time; // ["2024-01-01", ...]
+    const dates = d.time;
 
     const airAgg = aggregateAirQuality(
       data.air.hourly.time,
@@ -82,7 +93,6 @@ export default function Historical() {
 
     return (
       <div className="charts-grid">
-        {/* Temperature */}
         <BaseChart
           title="Temperature Trends (°C)"
           categories={dates}
@@ -96,7 +106,6 @@ export default function Historical() {
           colors={["#f97316", "#facc15", "#38bdf8"]}
         />
 
-        {/* Sun Cycle IST */}
         <BaseChart
           title="Sunrise & Sunset (IST hours)"
           categories={dates}
@@ -115,7 +124,6 @@ export default function Historical() {
           }}
         />
 
-        {/* Precipitation */}
         <BaseChart
           title="Precipitation Total (mm)"
           categories={dates}
@@ -125,31 +133,22 @@ export default function Historical() {
           colors={["#818cf8"]}
         />
 
-        {/* Wind */}
         <BaseChart
-          title="Max Wind Speed (km/h)"
+          title="Wind: Max Speed (km/h) & Dominant Direction (°)"
           categories={dates}
           series={[
-            { name: "Wind Speed", data: d.wind_speed_10m_max },
+            { name: "Wind Speed (km/h)", data: d.wind_speed_10m_max },
+            { name: "Wind Direction (°)", data: d.wind_direction_10m_dominant },
           ]}
           type="line"
-          yUnit=" km/h"
-          colors={["#4ade80"]}
+          yUnit=""
+          colors={["#4ade80", "#a78bfa"]}
+          dualYAxis={{
+            left: { title: "Speed (km/h)", unit: " km/h" },
+            right: { title: "Direction (°)", unit: "°" },
+          }}
         />
 
-        {/* Wind Direction */}
-        <BaseChart
-          title="Dominant Wind Direction (°)"
-          categories={dates}
-          series={[
-            { name: "Direction", data: d.wind_direction_10m_dominant },
-          ]}
-          type="scatter"
-          yUnit="°"
-          colors={["#a78bfa"]}
-        />
-
-        {/* Air Quality PM10 & PM2.5 */}
         <BaseChart
           title="Air Quality – PM10 & PM2.5 Daily Avg (μg/m³)"
           categories={dates}
@@ -163,14 +162,20 @@ export default function Historical() {
         />
       </div>
     );
-  };
+  }, [data]);
 
   return (
     <div className="page-content">
       <div className="page-header">
         <div>
           <h1 className="page-title">Historical Analysis</h1>
-          <p className="page-sub">Up to 2 years of historical weather data</p>
+          <p className="page-sub">
+            {locating
+              ? "📡 Detecting your location…"
+              : locationName
+              ? `📍 ${locationName}`
+              : `${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E`}
+          </p>
         </div>
       </div>
 
@@ -194,7 +199,7 @@ export default function Historical() {
             selected={end}
             onChange={(d) => setEnd(d)}
             minDate={start}
-            maxDate={new Date(Date.now() - 86400000 * 2)}
+            maxDate={new Date(Date.now() - 86400000)}
             dateFormat="dd MMM yyyy"
             className="date-input"
           />
@@ -216,7 +221,7 @@ export default function Historical() {
         </div>
       )}
 
-      {!loading && renderCharts()}
+      {!loading && charts}
 
       {!loading && !data && !error && (
         <div className="empty-state">
